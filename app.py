@@ -173,15 +173,19 @@ def main():
                 # Log the JSON response
                 logging.info(f"Query: {query} | Response: {response_json}")
 
+                st.markdown("### Analyst Recommendations")
                 # Display Analyst Recommendations
                 analyst_recs = response_json.get("analyst_recommendations", {})
                 if analyst_recs:
-                    # Display as JSON
-                    st.json(analyst_recs)
 
                     # Optional: Visualize as Bar Chart
                     df_recs = pd.DataFrame(list(analyst_recs.items()), columns=[
                                            'Recommendation', 'Count'])
+
+                    # Display as a Streamlit table
+                    st.table(df_recs)
+
+                    # Optional: Visualize as Bar Chart
                     st.bar_chart(data=df_recs.set_index('Recommendation'))
                 else:
                     st.warning(
@@ -209,10 +213,10 @@ def main():
 
                 # Provide Download Option
                 st.download_button(
-                    label="Download Response as JSON",
+                    label="Download Response as Text",
                     data=json.dumps(response_json, indent=4),
-                    file_name="response.json",
-                    mime="application/json"
+                    file_name="response.txt",
+                    mime="text/plain"
                 )
             else:
                 st.warning(
