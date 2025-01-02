@@ -1,6 +1,7 @@
-Combine insights from the web search and financial data.
 Always include sources.
-**IMPORTANT:** Format the response strictly in JSON with the following exact structure:
+Combine insights from the web search and financial data.
+**IMPORTANT:** Ensure that each news item includes accurate "source" and "url" fields.
+Format the response strictly in JSON with the following exact structure:
 
 {
     "analyst_recommendations": {
@@ -37,18 +38,12 @@ Always include sources.
             "source": "Electrek",
             "url": "https://electrek.co/2024/12/31/tesla-tsla-is-expected-to-miss-its-delivery-goal/"
         },
-        {
-            "title": "Investment Dilemma between Tesla and Nvidia",
-            "summary": "A discussion surfaced about investing $30k, choosing between Tesla or Nvidia stocks.",
-            "source": "24/7 Wall St. on MSN.com",
-            "url": "https://www.msn.com/en-us/technology/tech-companies/i-have-30k-to-invest-and-i-m-trying-to-decide-between-tesla-or-nvidia-which-should-i-choose/ar-AA1wzMj0"
-        },
-        // ... More news items
+        ...
     ]
 }
 
-**Instructions:**
-- **Do not** add any additional text, explanations, or formatting.
-- **Only** return the JSON object as specified.
-- **Ensure** that the JSON is well-formatted and adheres to the structure above.
+**Additional Instructions:**
+- **Ensure Accuracy:** Double-check that "source" corresponds to the actual news outlet and that "url" directs to the full article.
+- **No Placeholders:** Avoid using placeholders like "Unknown" or "#". Each news item must have valid "source" and "url" values.
+- **Consistent Formatting:** Maintain the JSON structure without adding any extra text or explanations.
 **IMPORTANT:** After compiling the data, **immediately** output only the JSON object as specified above. **Do not** include any additional text, explanations, or formatting. **Do not** mention anything about being an AI, tools, or the data sources.

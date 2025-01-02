@@ -14,3 +14,4 @@ Format the response strictly in JSON with the following structure:
       ]
 }
 Ensure that the JSON is well-formatted and adheres to the structure above.
+**IMPORTANT:** Ensure that each news item includes accurate "source" and "url" fields.
