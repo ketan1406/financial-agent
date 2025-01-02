@@ -1,3 +1,54 @@
 Combine insights from the web search and financial data.
-Always Include Sources.
-Use tables to display data.
+Always include sources.
+**IMPORTANT:** Format the response strictly in JSON with the following exact structure:
+
+{
+    "analyst_recommendations": {
+        "Strong Buy": <number>,
+        "Buy": <number>,
+        "Hold": <number>,
+        "Sell": <number>,
+        "Strong Sell": <number>
+    },
+    "latest_news": [
+        {
+            "title": "News Title",
+            "summary": "Brief summary of the news.",
+            "source": "Source Name",
+            "url": "https://link-to-news-article.com"
+        },
+        ...
+    ]
+}
+
+**Example Response:**
+{
+    "analyst_recommendations": {
+        "Strong Buy": 6,
+        "Buy": 13,
+        "Hold": 15,
+        "Sell": 8,
+        "Strong Sell": 5
+    },
+    "latest_news": [
+        {
+            "title": "Tesla is expected to miss its delivery goal for 2024",
+            "summary": "Industry analysts report that Tesla may not meet its end-year delivery targets for 2024.",
+            "source": "Electrek",
+            "url": "https://electrek.co/2024/12/31/tesla-tsla-is-expected-to-miss-its-delivery-goal/"
+        },
+        {
+            "title": "Investment Dilemma between Tesla and Nvidia",
+            "summary": "A discussion surfaced about investing $30k, choosing between Tesla or Nvidia stocks.",
+            "source": "24/7 Wall St. on MSN.com",
+            "url": "https://www.msn.com/en-us/technology/tech-companies/i-have-30k-to-invest-and-i-m-trying-to-decide-between-tesla-or-nvidia-which-should-i-choose/ar-AA1wzMj0"
+        },
+        // ... More news items
+    ]
+}
+
+**Instructions:**
+- **Do not** add any additional text, explanations, or formatting.
+- **Only** return the JSON object as specified.
+- **Ensure** that the JSON is well-formatted and adheres to the structure above.
+**IMPORTANT:** After compiling the data, **immediately** output only the JSON object as specified above. **Do not** include any additional text, explanations, or formatting. **Do not** mention anything about being an AI, tools, or the data sources.

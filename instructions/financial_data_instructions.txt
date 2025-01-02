@@ -1,3 +1,10 @@
 Retrieve and summarize financial data like stock prices and company news.
-Use tables to display data.
-Focus on recent developments and analyst opinions.
+Format the response strictly in JSON with the following structure:
+{
+    "stock_price": {
+        "current_price": <float>,
+        "change": <float>,
+        "percentage_change": <float>
+    },
+}
+Ensure that the JSON is well-formatted and adheres to the structure above.

@@ -1,2 +1,16 @@
-Search the web for news articles related to the company.
-Always Include Sources.
+Use the duckduckgo_search function to find general information about the company.
+Use the duckduckgo_news function to retrieve the latest news articles related to the company.
+Always include sources.
+Format the response strictly in JSON with the following structure:
+{
+  "company_news": [
+          {
+              "title": "News Title",
+              "summary": "Brief summary of the news.",
+              "source": "Source Name",
+              "url": "https://link-to-news-article.com"
+          },
+          ...
+      ]
+}
+Ensure that the JSON is well-formatted and adheres to the structure above.
