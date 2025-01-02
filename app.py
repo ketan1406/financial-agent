@@ -10,6 +10,7 @@ import json
 import pandas as pd
 from jsonschema import validate, ValidationError
 import time
+import re  # Import the re module
 
 # Constants
 MAX_RETRIES = 3
@@ -68,6 +69,57 @@ def extract_json_from_response(response):
         return None
 
 
+def extract_company_and_ticker(query):
+    """
+    Extracts the company name and ticker symbol from the user's query.
+
+    Args:
+        query (str): The user's input query.
+
+    Returns:
+        tuple: A tuple containing the company name and ticker symbol.
+               Returns (None, None) if extraction fails.
+    """
+    pattern = r"for\s+([A-Za-z\s&]+)\s+\((?:NASDAQ|NYSE|AMEX):\s+([A-Za-z]+)\)"
+    match = re.search(pattern, query, re.IGNORECASE)
+    if match:
+        company = match.group(1).strip()
+        ticker = match.group(2).strip().upper()
+        return company, ticker
+    else:
+        return None, None
+
+
+def format_response_as_text(response_json, company, ticker):
+    """
+    Formats the JSON response into a readable plain text format.
+
+    Args:
+        response_json (dict): The JSON response from the agent.
+        company (str): The company name.
+        ticker (str): The ticker symbol.
+
+    Returns:
+        str: The formatted text.
+    """
+    analyst_recs = response_json.get("analyst_recommendations", {})
+    latest_news = response_json.get("latest_news", [])
+
+    text = f"Analyst Recommendations for {company} ({ticker}):\n"
+    for rec, count in analyst_recs.items():
+        text += f"- {rec}: {count}\n"
+
+    text += f"\nLatest {company} News:\n"
+    for news in latest_news:
+        title = news.get("title", "No Title")
+        summary = news.get("summary", "No Summary")
+        source = news.get("source", "Unknown")
+        url = news.get("url", "#")
+        text += f"• {title}\n  {summary}\n  Source: {source} ({url})\n\n"
+
+    return text
+
+
 def main():
     # Streamlit App Layout
     st.set_page_config(page_title="Financial Agent", layout="wide")
@@ -101,88 +153,93 @@ def main():
     if st.button("Submit"):
         with st.spinner("Processing..."):
             response_json = None
-            for attempt in range(1, MAX_RETRIES + 1):
-                try:
-                    # Use the agent's run method to get the response directly
-                    response = multi_ai_agent.run(query)
-
-                    # Extract JSON string from RunResponse
-                    json_str = extract_json_from_response(response)
-
-                    if not json_str:
-                        raise ValueError("No content extracted from response.")
-
-                    # Attempt to parse the response as JSON
+            company, ticker = extract_company_and_ticker(query)
+            if not company or not ticker:
+                st.error(
+                    "Could not extract company name and ticker symbol from the query.")
+                logging.error(f"Extraction Failed for query '{query}'.")
+            else:
+                for attempt in range(1, MAX_RETRIES + 1):
                     try:
-                        response_json = json.loads(json_str)
-                        logging.debug(f"Parsed JSON: {response_json}")
-                    except json.JSONDecodeError as jde:
-                        logging.warning(
-                            f"Attempt {attempt}: JSON Decode Error - {jde.msg}")
-                        logging.debug(f"Full Response Content: {json_str}")
-                        response_json = None
+                        # Use the agent's run method to get the response directly
+                        response = multi_ai_agent.run(query)
 
-                    # Validate JSON Schema
-                    if response_json:
-                        schema = {
-                            "type": "object",
-                            "properties": {
-                                "analyst_recommendations": {
-                                    "type": "object",
-                                    "properties": {
-                                        "Strong Buy": {"type": "integer"},
-                                        "Buy": {"type": "integer"},
-                                        "Hold": {"type": "integer"},
-                                        "Sell": {"type": "integer"},
-                                        "Strong Sell": {"type": "integer"}
-                                    },
-                                    "required": ["Strong Buy", "Buy", "Hold", "Sell", "Strong Sell"]
-                                },
-                                "latest_news": {
-                                    "type": "array",
-                                    "items": {
+                        # Extract JSON string from RunResponse
+                        json_str = extract_json_from_response(response)
+
+                        if not json_str:
+                            raise ValueError(
+                                "No content extracted from response.")
+
+                        # Attempt to parse the response as JSON
+                        try:
+                            response_json = json.loads(json_str)
+                            logging.debug(f"Parsed JSON: {response_json}")
+                        except json.JSONDecodeError as jde:
+                            logging.warning(
+                                f"Attempt {attempt}: JSON Decode Error - {jde.msg}")
+                            logging.debug(f"Full Response Content: {json_str}")
+                            response_json = None
+
+                        # Validate JSON Schema
+                        if response_json:
+                            schema = {
+                                "type": "object",
+                                "properties": {
+                                    "analyst_recommendations": {
                                         "type": "object",
                                         "properties": {
-                                            "title": {"type": "string"},
-                                            "summary": {"type": "string"},
-                                            "source": {"type": "string"},
-                                            "url": {"type": "string", "format": "uri"}
+                                            "Strong Buy": {"type": "integer"},
+                                            "Buy": {"type": "integer"},
+                                            "Hold": {"type": "integer"},
+                                            "Sell": {"type": "integer"},
+                                            "Strong Sell": {"type": "integer"}
                                         },
-                                        "required": ["title", "summary", "source", "url"]
+                                        "required": ["Strong Buy", "Buy", "Hold", "Sell", "Strong Sell"]
+                                    },
+                                    "latest_news": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "title": {"type": "string"},
+                                                "summary": {"type": "string"},
+                                                "source": {"type": "string"},
+                                                "url": {"type": "string", "format": "uri"}
+                                            },
+                                            "required": ["title", "summary", "source", "url"]
+                                        }
                                     }
-                                }
-                            },
-                            "required": ["analyst_recommendations", "latest_news"]
-                        }
-                        try:
-                            validate(instance=response_json, schema=schema)
-                            break  # Successful parsing and validation
-                        except ValidationError as ve:
-                            logging.warning(
-                                f"Attempt {attempt}: Schema Validation Error - {ve.message}")
-                            response_json = None
-                            break  # Don't retry if schema is incorrect
-                except Exception as e:
-                    logging.error(
-                        f"Attempt {attempt}: Error processing query '{query}': {e}")
-                    response_json = None
-                    if attempt < MAX_RETRIES:
-                        time.sleep(RETRY_DELAY)
+                                },
+                                "required": ["analyst_recommendations", "latest_news"]
+                            }
+                            try:
+                                validate(instance=response_json, schema=schema)
+                                break  # Successful parsing and validation
+                            except ValidationError as ve:
+                                logging.warning(
+                                    f"Attempt {attempt}: Schema Validation Error - {ve.message}")
+                                response_json = None
+                                break  # Don't retry if schema is incorrect
+                    except Exception as e:
+                        logging.error(
+                            f"Attempt {attempt}: Error processing query '{query}': {e}")
+                        response_json = None
+                        if attempt < MAX_RETRIES:
+                            time.sleep(RETRY_DELAY)
 
-            if response_json:
+            if response_json and company and ticker:
                 # Log the JSON response
                 logging.info(f"Query: {query} | Response: {response_json}")
 
-                st.markdown("### Analyst Recommendations")
-                # Display Analyst Recommendations
+                # Display Analyst Recommendations with Dynamic Headers
+                st.markdown(
+                    f"### Analyst Recommendations for {company} ({ticker})")
                 analyst_recs = response_json.get("analyst_recommendations", {})
                 if analyst_recs:
-
-                    # Optional: Visualize as Bar Chart
+                    # Convert to DataFrame and display as a table
                     df_recs = pd.DataFrame(list(analyst_recs.items()), columns=[
                                            'Recommendation', 'Count'])
-
-                    # Display as a Streamlit table
                     st.table(df_recs)
 
                     # Optional: Visualize as Bar Chart
@@ -191,8 +248,8 @@ def main():
                     st.warning(
                         "No analyst recommendations found in the response.")
 
-                # Display Latest News
-                st.markdown("### Latest Tesla News")
+                # Display Latest News with Dynamic Headers
+                st.markdown(f"### Latest {company} News")
                 latest_news = response_json.get("latest_news", [])
                 if latest_news:
                     for news in latest_news:
@@ -207,18 +264,20 @@ def main():
                 else:
                     st.warning("No latest news found in the response.")
 
-                # Save Response to File
-                with open("response.json", "w") as file:
-                    json.dump(response_json, file, indent=4)
+                # Save Response to File as Text
+                formatted_text = format_response_as_text(
+                    response_json, company, ticker)
+                with open("response.txt", "w") as file:
+                    file.write(formatted_text)
 
-                # Provide Download Option
+                # Provide Download Option as Text
                 st.download_button(
                     label="Download Response as Text",
-                    data=json.dumps(response_json, indent=4),
+                    data=formatted_text,
                     file_name="response.txt",
                     mime="text/plain"
                 )
-            else:
+            elif not response_json and company and ticker:
                 st.warning(
                     "The AI didn't return a valid JSON response. Please try a different query.")
 
